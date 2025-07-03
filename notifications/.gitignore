@@ -1,0 +1,33 @@
+# Binarios
+/bin/
+/notifications
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Archivos generados
+*.exe
+*.test
+*.prof
+
+# Archivos generados por protobuf
+/proto/*.pb.go
+
+# Variables de entorno
+.env
+*.env
+
+# Archivos de log
+*.log
+
+# Binarios específicos del proyecto
+/cmd/main
+
+# Directorios de dependencias
+vendor/
+
+# Archivos temporales
+tmp/

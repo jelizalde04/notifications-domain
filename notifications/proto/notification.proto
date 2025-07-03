@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "proto/notificationpb";
+
+service NotificationService {
+  rpc FollowCreated (FollowCreatedRequest) returns (NotificationResponse);
+}
+
+message FollowCreatedRequest {
+  string actorId = 1;
+  string recipeId = 2;
+  string responsableId = 3;
+  string type = 4;
+  string content = 5;
+  string timestamp = 6;
+}
+
+message NotificationResponse {
+  string message = 1;
+}
