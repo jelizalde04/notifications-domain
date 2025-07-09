@@ -33,7 +33,6 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
           echo "NOTIFICATIONS_DB_NAME=${{ secrets.NOTIFICATIONS_DB_NAME }}" >> .env
-          echo "RESPONSIBLE_DB_NAME=${{ secrets.RESPONSIBLE_DB_NAME }}" >> .env
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
           echo "DOCKERHUB_TOKEN=${{ secrets.DOCKERHUB_TOKEN }}" >> .env
@@ -71,7 +70,6 @@ jobs:
               -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
               -e DB_PORT="${{ secrets.DB_PORT }}" \
               -e NOTIFICATIONS_DB_NAME="${{ secrets.NOTIFICATIONS_DB_NAME }}" \
-              -e RESPONSIBLE_DB_NAME="${{ secrets.RESPONSIBLE_DB_NAME }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
             docker logs backend || true
@@ -103,7 +101,6 @@ jobs:
               -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
               -e DB_PORT="${{ secrets.DB_PORT }}" \
               -e NOTIFICATIONS_DB_NAME="${{ secrets.NOTIFICATIONS_DB_NAME }}" \
-              -e RESPONSIBLE_DB_NAME="${{ secrets.RESPONSIBLE_DB_NAME }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
             docker logs backend || true
