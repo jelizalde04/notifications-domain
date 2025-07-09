@@ -33,13 +33,18 @@ func main() {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
+	// Ruta health
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
 	// Webhook Likes
 	r.POST("/webhook/like", handlers.WebhookLike)
 
 	// WEBSOCKET
 	r.GET("/ws", handlers.WsHandler)
 
-	// Endpoints para consultar notificaciones
+	// Endpoints
 	r.GET("/notifications/:userId", handlers.GetNotifications)
 	r.PUT("/notifications/:notificationId/read", handlers.MarkNotificationAsRead)
 
