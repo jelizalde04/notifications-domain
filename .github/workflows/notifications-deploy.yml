@@ -1,42 +1,89 @@
-name: Docker Build and Deploy - Backend Microservice
+name: Docker Build and Deploy Backend Microservice
 
 on:
-  pull_request:
-    types:
-      - closed
+  push:
     branches:
       - test
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build_backend_image:
-    if: github.event.pull_request.merged == true
+  build_docker_backend:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: '1.19'
+
+      - name: Install dependencies
+        run: |
+          cd notifications
+          go mod download
+
+      - name: Crear archivo .env con secrets de GitHub
+        run: |
+          cd notifications
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "NOTIFICATIONS_DB_NAME=${{ secrets.NOTIFICATIONS_DB_NAME }}" >> .env
+          echo "RESPONSIBLE_DB_NAME=${{ secrets.RESPONSIBLE_DB_NAME }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
+          echo "DOCKERHUB_TOKEN=${{ secrets.DOCKERHUB_TOKEN }}" >> .env
+
+      - name: Build Docker image (con .env embebido solo para build)
+        run: |
+          cd notifications
+          cp .env .env.prod
+          docker build --build-arg ENV_FILE=.env.prod -t ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest .
+
+  push_dockerhub_backend:
+    needs: build_docker_backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Crear archivo .env con secrets de GitHub
+        run: |
+          cd notifications
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "NOTIFICATIONS_DB_NAME=${{ secrets.NOTIFICATIONS_DB_NAME }}" >> .env
+          echo "RESPONSIBLE_DB_NAME=${{ secrets.RESPONSIBLE_DB_NAME }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
+          echo "DOCKERHUB_TOKEN=${{ secrets.DOCKERHUB_TOKEN }}" >> .env
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-      - name: Build Docker image
+      - name: Build Docker image (con .env embebido solo para build)
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest .
+          cd notifications
+          cp .env .env.prod
+          docker build --build-arg ENV_FILE=.env.prod -t ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest .
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
 
   deploy_backend_qa:
-    needs: build_backend_image
+    needs: push_dockerhub_backend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/test'
     steps:
-      - name: Deploy to EC2 QA
+      - name: Deploy to EC2 QA via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.EC2_FOLLOWER_DOMAIN_TEST }}
@@ -45,10 +92,8 @@ jobs:
           port: 22
           script: |
             docker ps -a --format '{{.Names}}' | grep -Eq "^backend$" && docker stop backend && docker rm backend
-
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
-
             docker run -d \
               --name backend \
               -p 8001:8001 \
@@ -61,24 +106,16 @@ jobs:
               -e RESPONSIBLE_DB_NAME="${{ secrets.RESPONSIBLE_DB_NAME }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
-
+            docker logs backend || true
             docker image prune -f
-
-            IMAGES_IN_USE=$(docker ps --format '{{.Image}}' | xargs -n1 docker inspect --format '{{.Id}}' 2>/dev/null | sort -u)
-            docker images "${{ secrets.DOCKERHUB_USERNAME }}/backend" --format '{{.ID}}' | sort -u | while read -r IMAGE_ID; do
-              if ! echo "$IMAGES_IN_USE" | grep -q "$IMAGE_ID"; then
-                docker rmi "$IMAGE_ID" || true
-              fi
-            done
-
-            docker system prune -af || true
+            docker images ${{ secrets.DOCKERHUB_USERNAME }}/backend --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}" | tail -n +2 | head -n -1 | awk '{print $3}' | xargs -r docker rmi || true
 
   deploy_backend_prod:
-    needs: build_backend_image
+    needs: push_dockerhub_backend
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Deploy to EC2 PROD
+      - name: Deploy to EC2 PROD via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.EC2_FOLLOWER_DOMAIN_PROD }}
@@ -87,10 +124,8 @@ jobs:
           port: 22
           script: |
             docker ps -a --format '{{.Names}}' | grep -Eq "^backend$" && docker stop backend && docker rm backend
-
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
-
             docker run -d \
               --name backend \
               -p 8001:8001 \
@@ -103,14 +138,6 @@ jobs:
               -e RESPONSIBLE_DB_NAME="${{ secrets.RESPONSIBLE_DB_NAME }}" \
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
-
+            docker logs backend || true
             docker image prune -f
-
-            IMAGES_IN_USE=$(docker ps --format '{{.Image}}' | xargs -n1 docker inspect --format '{{.Id}}' 2>/dev/null | sort -u)
-            docker images "${{ secrets.DOCKERHUB_USERNAME }}/backend" --format '{{.ID}}' | sort -u | while read -r IMAGE_ID; do
-              if ! echo "$IMAGES_IN_USE" | grep -q "$IMAGE_ID"; then
-                docker rmi "$IMAGE_ID" || true
-              fi
-            done
-
-            docker system prune -af || true
+            docker images ${{ secrets.DOCKERHUB_USERNAME }}/backend --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}" | tail -n +2 | head -n -1 | awk '{print $3}' | xargs -r docker rmi || true
