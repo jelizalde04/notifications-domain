@@ -86,7 +86,7 @@ jobs:
       - name: Deploy to EC2 QA via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_FOLLOWER_DOMAIN_TEST }}
+          host: ${{ secrets.EC2_NOTIFICATIONS_DOMAIN_TEST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
@@ -118,7 +118,7 @@ jobs:
       - name: Deploy to EC2 PROD via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_FOLLOWER_DOMAIN_PROD }}
+          host: ${{ secrets.EC2_NOTIFICATIONS_DOMAIN_PROD }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY_PROD }}
           port: 22
