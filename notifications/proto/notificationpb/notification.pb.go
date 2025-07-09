@@ -71,7 +71,7 @@ func (x *FollowCreatedRequest) GetActorId() string {
 	return ""
 }
 
-func (x *FollowCreatedRequest) GetRecipeId() string {
+func (x *FollowCreatedRequest) GetRecipientId() string {
 	if x != nil {
 		return x.RecipeId
 	}

@@ -8,13 +8,14 @@ import (
 )
 
 type Notification struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	ActorID     uuid.UUID `gorm:"type:uuid;column:actorId"`
-	RecipientID uuid.UUID `gorm:"type:uuid;column:recipientId"`
-	Type        string    `gorm:"type:string"`
-	Content     string    `gorm:"type:text"`
-	Read        bool      `gorm:"type:boolean;default:false"`
-	Timestamp   time.Time `gorm:"type:timestamp"`
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	ActorID       uuid.UUID `gorm:"type:uuid;column:actorId"`
+	RecipientID   uuid.UUID `gorm:"type:uuid;column:recipientId"`
+	ResponsibleID uuid.UUID `gorm:"type:uuid;column:responsibleId"`
+	Type          string    `gorm:"type:string"`
+	Content       string    `gorm:"type:text"`
+	Read          bool      `gorm:"type:boolean;default:false"`
+	Timestamp     time.Time `gorm:"type:timestamp"`
 }
 
 func (Notification) TableName() string {

@@ -16,11 +16,12 @@ func main() {
 	go grpc.StartGRPCServer()
 	r := gin.Default()
 
-	// CORS libre
+	// CORS libre con soporte para WebSockets
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Sec-WebSocket-Protocol, Sec-WebSocket-Key, Sec-WebSocket-Version, Upgrade, Connection")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(200)
 			return
@@ -34,6 +35,13 @@ func main() {
 
 	// Webhook Likes
 	r.POST("/webhook/like", handlers.WebhookLike)
+
+	// WEBSOCKET
+	r.GET("/ws", handlers.WsHandler)
+
+	// Endpoints para consultar notificaciones
+	r.GET("/notifications/:userId", handlers.GetNotifications)
+	r.PUT("/notifications/:notificationId/read", handlers.MarkNotificationAsRead)
 
 	log.Println("HTTP server listening on :8001")
 	r.Run(":8001")
