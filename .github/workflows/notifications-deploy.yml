@@ -10,38 +10,25 @@ on:
       - main
 
 jobs:
-  build_docker_backend:
+  build_and_push_backend:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
         uses: actions/checkout@v3
 
-      # Corrige go.mod para formato compatible (quita toolchain y el .0)
-      - name: Corregir archivo go.mod para compatibilidad
-        run: |
-          cd notifications
-          sed -i 's/^go 1\.23\.0/go 1.23/' go.mod
-          sed -i '/^toolchain /d' go.mod
-
-      # Sincroniza dependencias usando Go 1.23 (vía Docker)
-      - name: Sincronizar go.mod y go.sum usando Go 1.23 (Docker)
-        run: |
-          docker run --rm -v "$PWD":/app -w /app golang:1.23 sh -c "cd notifications && go mod tidy"
-
-      - name: Set up Go
+      - name: Set up Go 1.23
         uses: actions/setup-go@v5
         with:
-          go-version: '1.20'
+          go-version: '1.23'
 
       - name: Install dependencies
-        run: |
-          cd notifications
-          go mod download
+        working-directory: notifications
+        run: go mod download
 
-      - name: Crear archivo .env con secrets de GitHub
+      - name: Build Docker image
+        working-directory: notifications
         run: |
-          cd notifications
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
           echo "DB_USER=${{ secrets.DB_USER }}" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
@@ -50,48 +37,17 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
           echo "DOCKERHUB_TOKEN=${{ secrets.DOCKERHUB_TOKEN }}" >> .env
-
-      - name: Build Docker image (con .env embebido solo para build)
-        run: |
-          cd notifications
           cp .env .env.prod
           docker build --build-arg ENV_FILE=.env.prod -t ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest .
-
-  push_dockerhub_backend:
-    needs: build_docker_backend
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Crear archivo .env con secrets de GitHub
-        run: |
-          cd notifications
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
-          echo "NOTIFICATIONS_DB_NAME=${{ secrets.NOTIFICATIONS_DB_NAME }}" >> .env
-          echo "RESPONSIBLE_DB_NAME=${{ secrets.RESPONSIBLE_DB_NAME }}" >> .env
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-          echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
-          echo "DOCKERHUB_TOKEN=${{ secrets.DOCKERHUB_TOKEN }}" >> .env
 
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-      - name: Build Docker image (con .env embebido solo para build)
-        run: |
-          cd notifications
-          cp .env .env.prod
-          docker build --build-arg ENV_FILE=.env.prod -t ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest .
-
       - name: Push Docker image
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
 
-  deploy_backend_qa:
-    needs: push_dockerhub_backend
+  deploy_qa:
+    needs: build_and_push_backend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/test'
     steps:
@@ -122,10 +78,10 @@ jobs:
             docker image prune -f
             docker images ${{ secrets.DOCKERHUB_USERNAME }}/backend --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}" | tail -n +2 | head -n -1 | awk '{print $3}' | xargs -r docker rmi || true
 
-  deploy_backend_prod:
-    needs: push_dockerhub_backend
+  deploy_prod:
+    needs: build_and_push_backend
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Deploy to EC2 PROD via SSH
         uses: appleboy/ssh-action@v0.1.7
