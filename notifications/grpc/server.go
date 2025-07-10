@@ -33,9 +33,9 @@ func (s *NotificationGRPCServer) FollowCreated(ctx context.Context, req *pb.Foll
 		return nil, fmt.Errorf("invalid recipientId: %w", err)
 	}
 
-	responsibleID, err := uuid.Parse(req.GetResponsableId())
+	responsibleID, err := uuid.Parse(req.GetResponsibleId())
 	if err != nil {
-		return nil, fmt.Errorf("invalid responsableId: %w", err)
+		return nil, fmt.Errorf("invalid responsibleId: %w", err)
 	}
 
 	noti := models.Notification{
@@ -72,12 +72,12 @@ func (s *NotificationGRPCServer) FollowCreated(ctx context.Context, req *pb.Foll
 		noti.Type, noti.Content, noti.Timestamp.Format(time.RFC3339))
 
 	// Intentar enviar por WebSocket (no falla si el usuario no está conectado)
-	log.Printf("Attempting to send WebSocket notification to responsibleId: %s", req.GetResponsableId())
-	if err := handlers.SendNotification(req.GetResponsableId(), notificationMessage); err != nil {
+	log.Printf("Attempting to send WebSocket notification to responsibleId: %s", req.GetResponsibleId())
+	if err := handlers.SendNotification(req.GetResponsibleId(), notificationMessage); err != nil {
 		// Log pero no falla la operación
-		log.Printf("Could not send WebSocket notification to user %s: %v", req.GetResponsableId(), err)
+		log.Printf("Could not send WebSocket notification to user %s: %v", req.GetResponsibleId(), err)
 	} else {
-		log.Printf("WebSocket notification sent successfully to user %s", req.GetResponsableId())
+		log.Printf("WebSocket notification sent successfully to user %s", req.GetResponsibleId())
 	}
 
 	return &pb.NotificationResponse{

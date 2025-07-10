@@ -78,7 +78,7 @@ func (x *FollowCreatedRequest) GetRecipientId() string {
 	return ""
 }
 
-func (x *FollowCreatedRequest) GetResponsableId() string {
+func (x *FollowCreatedRequest) GetResponsibleId() string {
 	if x != nil {
 		return x.ResponsibleId
 	}
