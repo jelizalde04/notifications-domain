@@ -1,6 +1,6 @@
 # Notifications Domain 🔔
 
-Notification system developed in Go that provides comprehensive real-time notification functionalities through WebSockets, REST API, and gRPC.
+Notification system developed in Go that provides comprehensive real-time notification functionalities through WebSockets, REST API, and gRPC.   
 
 ## 🏗️ General Architecture
    
