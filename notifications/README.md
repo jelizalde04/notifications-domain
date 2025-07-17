@@ -1,7 +1,7 @@
 # Sistema de Notificaciones en Tiempo Real
 
 Sistema completo de notificaciones en Go que recibe datos por webhook y gRPC, los almacena en PostgreSQL y los envía en tiempo real al frontend mediante WebSocket.
-
+ 
 ## 🚀 Características
 
 - **WebHook**: Recibe notificaciones desde sistemas externos
